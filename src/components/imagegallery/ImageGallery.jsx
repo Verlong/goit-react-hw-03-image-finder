@@ -3,6 +3,7 @@ import css from '../../styles/styles.module.css';
 import PropTypes from 'prop-types';
 import ImageGalleryItem from 'components/imagegalleryitem/ImageGalleryItem';
 import getImages from 'picapi/PicApi';
+import { PER_PAGE } from 'picapi/PicApi';
 import Loader from 'components/loader/Loader';
 import Button from 'components/button/Button';
 import Notiflix from 'notiflix';
@@ -16,6 +17,7 @@ class ImageGallery extends React.Component {
   state = {
     images: [],
     status: 'idle',
+    totalPages: 0,
   };
 
   componentDidUpdate(prevProps, prevState) {
@@ -32,9 +34,14 @@ class ImageGallery extends React.Component {
 
     getImages(inputValue, page)
       .then(response => {
+        const totalPages = Math.ceil(response.totalHits / PER_PAGE);
+        const shouldShowLoadMore = totalPages > 1;
+
         this.setState({
           images: response.hits,
           status: 'resolve',
+          totalPages: totalPages,
+          shouldShowLoadMore: shouldShowLoadMore,
         });
       })
       .catch(error => this.setState({ status: 'rejected' }));
@@ -54,7 +61,7 @@ class ImageGallery extends React.Component {
   };
 
   render() {
-    const { images, status } = this.state;
+    const { images, status, shouldShowLoadMore } = this.state;
 
     if (status === 'pending') {
       return <Loader />;
@@ -73,14 +80,18 @@ class ImageGallery extends React.Component {
               />
             ))}
           </ul>
-          {this.state.images.length !== 0 ? (
-            <Button onClick={this.props.loadMoreBtn} />
-          ) : (
-            Notiflix.Notify.failure('No results')
-          )}
+          {shouldShowLoadMore &&
+            (this.props.page < this.state.totalPages ? (
+              <Button onClick={this.props.loadMoreBtn} />
+            ) : (
+              Notiflix.Notify.failure('No more results')
+            ))}
+          {images.length === 0 && Notiflix.Notify.failure('No results')}
         </div>
       );
     }
+
+    return null;
   }
 }
 
